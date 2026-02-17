@@ -30,6 +30,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
         }
         
         .header-left h1 {
@@ -47,6 +49,7 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
         }
         
         .status-indicator {
@@ -94,6 +97,12 @@
         
         .btn:active {
             transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
         
         .cards-grid {
@@ -172,6 +181,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
         
         .chart-header h3 {
@@ -276,6 +287,21 @@
             }
         }
         
+        .error-card {
+            grid-column: 1/-1;
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .error-card h3 {
+            color: #721c24;
+        }
+        
+        .error-card p {
+            color: #721c24;
+            margin-top: 10px;
+        }
+        
         /* Scrollbar styling */
         ::-webkit-scrollbar {
             width: 8px;
@@ -377,96 +403,113 @@
 
     <script>
         // ============================================
-        // CONFIGURACIÓN - Reemplaza con tus valores
+        // CONFIGURACIÓN - TUS CREDENCIALES
         // ============================================
         const SUPABASE_URL = "https://qnjizqowddtvzzfillmo.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_Agu_I1nw4mY1qRARQBbaHQ_6lTWsFTh";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFuaml6cW93ZGR0dnp6ZmlsbG1vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ3MjA1OTYsImV4cCI6MjA1MDI5NjU5Nn0.NqZCkIYB1S2rUDYWwqt7RKWQ4SdmxXBxIw-1xqXd8zo";
         
-        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        let cashFlowChart = null
-        let netFlowChart = null
-        let currentForecastDays = 30
+        let cashFlowChart = null;
+        let netFlowChart = null;
+        let currentForecastDays = 30;
+
+        // ============================================
+        // HELPER: Direct API Call
+        // ============================================
+        
+        async function callFinanceAPI(action, params = {}) {
+            const queryString = new URLSearchParams({ action, ...params }).toString();
+            const url = `${SUPABASE_URL}/functions/v1/finance-agent-api?${queryString}`;
+            
+            console.log(`📡 Calling API: ${url}`);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API Error Response:', errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+            
+            const data = await response.json();
+            console.log(`✅ API Response:`, data);
+            return data;
+        }
 
         // ============================================
         // MAIN FUNCTIONS
         // ============================================
 
         async function refreshDashboard() {
-            console.log('🔄 Refreshing dashboard...')
+            console.log('🔄 Refreshing dashboard...');
             
             try {
-                // Llamar al edge function
-                const { data, error } = await sb.functions.invoke('finance-agent-api', {
-                    body: { action: 'dashboard' }
-                })
+                const data = await callFinanceAPI('dashboard');
 
-                if (error) throw error
+                console.log('✅ Dashboard data received:', data);
 
-                console.log('✅ Dashboard data received:', data)
-
-                // Actualizar componentes
-                updateKPICards(data)
-                updateCharts(data.forecast)
-                updateDecisions(data.recent_decisions)
-                updateAlerts(data.active_alerts)
+                updateKPICards(data);
+                updateCharts(data.forecast || []);
+                updateDecisions(data.recent_decisions || []);
+                updateAlerts(data.active_alerts || []);
 
             } catch (error) {
-                console.error('❌ Error loading dashboard:', error)
-                showError('Error loading dashboard: ' + error.message)
+                console.error('❌ Error loading dashboard:', error);
+                showError('Error loading dashboard: ' + error.message);
             }
         }
 
         async function runAnalysis() {
-            const btn = event.target
-            btn.disabled = true
-            btn.textContent = '⏳ Analyzing...'
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Analyzing...';
 
             try {
-                const { data, error } = await sb.functions.invoke('finance-agent-api', {
-                    body: { action: 'analyze' }
-                })
+                const data = await callFinanceAPI('analyze');
 
-                if (error) throw error
-
-                console.log('✅ Analysis complete:', data)
+                console.log('✅ Analysis complete:', data);
                 
-                // Mostrar resultados
-                alert(`Analysis Complete!\n\nNet Flow: $${data.analysis.summary.net_flow.toLocaleString()}\nBurn Rate: $${data.analysis.summary.burn_rate.toLocaleString()}\n\nInsights: ${data.analysis.insights.length} found`)
+                const summary = data.analysis.summary;
+                alert(
+                    `Analysis Complete!\n\n` +
+                    `Net Flow: $${summary.net_flow.toLocaleString()}\n` +
+                    `Burn Rate: $${summary.burn_rate.toLocaleString()}\n\n` +
+                    `Insights: ${data.analysis.insights.length} found`
+                );
                 
-                // Refrescar dashboard
-                await refreshDashboard()
+                await refreshDashboard();
 
             } catch (error) {
-                console.error('❌ Error in analysis:', error)
-                alert('Error running analysis: ' + error.message)
+                console.error('❌ Error in analysis:', error);
+                alert('Error running analysis: ' + error.message);
             } finally {
-                btn.disabled = false
-                btn.innerHTML = '📊 Run Analysis'
+                btn.disabled = false;
+                btn.innerHTML = '📊 Run Analysis';
             }
         }
 
         async function changeForecastDays(days) {
-            currentForecastDays = days
+            currentForecastDays = days;
             
-            // Update tab styling
             document.querySelectorAll('.chart-tab').forEach(tab => {
-                tab.classList.remove('active')
-            })
-            event.target.classList.add('active')
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
 
-            // Load new forecast
             try {
-                const { data, error } = await sb.functions.invoke('finance-agent-api', {
-                    body: { action: 'forecast', days }
-                })
-
-                if (error) throw error
-
-                updateCharts(data.forecast)
+                const data = await callFinanceAPI('forecast', { days });
+                updateCharts(data.forecast || []);
 
             } catch (error) {
-                console.error('Error loading forecast:', error)
+                console.error('Error loading forecast:', error);
+                showError('Error loading forecast: ' + error.message);
             }
         }
 
@@ -475,13 +518,13 @@
         // ============================================
 
         function updateKPICards(data) {
-            const container = document.getElementById('kpi-cards')
-            const financial = data.financial_health
-            const activity = data.activity
+            const container = document.getElementById('kpi-cards');
+            const financial = data.financial_health || {};
+            const activity = data.activity || {};
 
             const statusClass = financial.status === 'healthy' ? 'status-healthy' : 
                                financial.status === 'warning' ? 'status-warning' : 
-                               'status-critical'
+                               'status-critical';
 
             container.innerHTML = `
                 <div class="card">
@@ -489,9 +532,9 @@
                         <div class="card-icon">💰</div>
                         <h3>Cash Position</h3>
                     </div>
-                    <div class="metric">$${financial.total_cash.toLocaleString()}</div>
-                    <p class="metric-subtitle">${financial.days_of_operation} days of operation</p>
-                    <span class="status-badge ${statusClass}">${financial.status.toUpperCase()}</span>
+                    <div class="metric">$${(financial.total_cash || 0).toLocaleString()}</div>
+                    <p class="metric-subtitle">${(financial.days_of_operation || 0).toFixed(1)} days of operation</p>
+                    <span class="status-badge ${statusClass}">${(financial.status || 'unknown').toUpperCase()}</span>
                 </div>
                 
                 <div class="card">
@@ -499,7 +542,7 @@
                         <div class="card-icon">🔥</div>
                         <h3>Monthly Burn Rate</h3>
                     </div>
-                    <div class="metric">$${financial.monthly_burn_rate.toLocaleString()}</div>
+                    <div class="metric">$${(financial.monthly_burn_rate || 0).toLocaleString()}</div>
                     <p class="metric-subtitle">Average monthly expenses</p>
                 </div>
                 
@@ -508,9 +551,9 @@
                         <div class="card-icon">🤖</div>
                         <h3>Agent Activity</h3>
                     </div>
-                    <div class="metric">${activity.total_decisions}</div>
+                    <div class="metric">${activity.total_decisions || 0}</div>
                     <p class="metric-subtitle">Decisions made</p>
-                    <p class="metric-subtitle">${activity.active_alerts} active alerts</p>
+                    <p class="metric-subtitle">${activity.active_alerts || 0} active alerts</p>
                 </div>
                 
                 <div class="card">
@@ -518,23 +561,26 @@
                         <div class="card-icon">📊</div>
                         <h3>Accounts Monitored</h3>
                     </div>
-                    <div class="metric">${activity.accounts_monitored}</div>
+                    <div class="metric">${activity.accounts_monitored || 0}</div>
                     <p class="metric-subtitle">Financial accounts tracked</p>
                 </div>
-            `
+            `;
         }
 
         function updateCharts(forecast) {
-            if (!forecast || forecast.length === 0) return
+            if (!forecast || forecast.length === 0) {
+                console.warn('No forecast data available');
+                return;
+            }
 
-            const dates = forecast.map(f => new Date(f.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
-            const balances = forecast.map(f => f.cumulative_balance)
-            const netFlows = forecast.map(f => f.net_flow)
+            const dates = forecast.map(f => new Date(f.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            const balances = forecast.map(f => f.cumulative_balance);
+            const netFlows = forecast.map(f => f.net_flow);
 
             // Cash Flow Chart
-            const ctx1 = document.getElementById('cashFlowChart').getContext('2d')
+            const ctx1 = document.getElementById('cashFlowChart').getContext('2d');
             
-            if (cashFlowChart) cashFlowChart.destroy()
+            if (cashFlowChart) cashFlowChart.destroy();
 
             cashFlowChart = new Chart(ctx1, {
                 type: 'line',
@@ -570,12 +616,12 @@
                         }
                     }
                 }
-            })
+            });
 
             // Net Flow Chart
-            const ctx2 = document.getElementById('netFlowChart').getContext('2d')
+            const ctx2 = document.getElementById('netFlowChart').getContext('2d');
             
-            if (netFlowChart) netFlowChart.destroy()
+            if (netFlowChart) netFlowChart.destroy();
 
             netFlowChart = new Chart(ctx2, {
                 type: 'bar',
@@ -609,15 +655,15 @@
                         }
                     }
                 }
-            })
+            });
         }
 
         function updateDecisions(decisions) {
-            const container = document.getElementById('decisions-container')
+            const container = document.getElementById('decisions-container');
             
             if (!decisions || decisions.length === 0) {
-                container.innerHTML = '<div class="empty-state">No recent decisions</div>'
-                return
+                container.innerHTML = '<div class="empty-state">No recent decisions</div>';
+                return;
             }
 
             const html = decisions.map(decision => `
@@ -630,17 +676,17 @@
                         <small>Created: ${new Date(decision.created_at).toLocaleString()}</small>
                     </div>
                 </div>
-            `).join('')
+            `).join('');
 
-            container.innerHTML = html
+            container.innerHTML = html;
         }
 
         function updateAlerts(alerts) {
-            const container = document.getElementById('alerts-container')
+            const container = document.getElementById('alerts-container');
             
             if (!alerts || alerts.length === 0) {
-                container.innerHTML = '<div class="empty-state">✅ No active alerts</div>'
-                return
+                container.innerHTML = '<div class="empty-state">✅ No active alerts</div>';
+                return;
             }
 
             const html = alerts.map(alert => `
@@ -653,13 +699,22 @@
                         <small>Triggered: ${new Date(alert.triggered_at).toLocaleString()}</small>
                     </div>
                 </div>
-            `).join('')
+            `).join('');
 
-            container.innerHTML = html
+            container.innerHTML = html;
         }
 
         function showError(message) {
-            alert(message)
+            const container = document.getElementById('kpi-cards');
+            container.innerHTML = `
+                <div class="card error-card">
+                    <h3>⚠️ Error</h3>
+                    <p>${message}</p>
+                    <button class="btn" style="margin-top: 15px; background: #dc3545;" onclick="refreshDashboard()">
+                        Try Again
+                    </button>
+                </div>
+            `;
         }
 
         // ============================================
@@ -667,10 +722,14 @@
         // ============================================
 
         // Refresh every 60 seconds
-        setInterval(refreshDashboard, 60000)
+        setInterval(refreshDashboard, 60000);
 
         // Initial load
-        window.addEventListener('load', refreshDashboard)
+        window.addEventListener('load', () => {
+            console.log('🚀 Finance Dashboard Loading...');
+            console.log('Supabase URL:', SUPABASE_URL);
+            refreshDashboard();
+        });
     </script>
 </body>
 </html>
