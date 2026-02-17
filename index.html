@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance AI Agent - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-left h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+        
+        .header-left p {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .header-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #e8f5e9;
+            border-radius: 20px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4caf50;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .card-icon {
+            font-size: 2em;
+        }
+        
+        .card h3 {
+            color: #333;
+            font-size: 1em;
+            font-weight: 600;
+        }
+        
+        .metric {
+            font-size: 2.8em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 10px 0;
+        }
+        
+        .metric-subtitle {
+            color: #666;
+            font-size: 0.95em;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        
+        .status-healthy { background: #d4edda; color: #155724; }
+        .status-warning { background: #fff3cd; color: #856404; }
+        .status-critical { background: #f8d7da; color: #721c24; }
+        
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .chart-header h3 {
+            color: #333;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+        
+        .chart-tabs {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chart-tab {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        
+        .chart-tab.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .decisions-list, .alerts-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .decision-item, .alert-item {
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 10px 0;
+            background: linear-gradient(to right, rgba(102, 126, 234, 0.1), transparent);
+            border-radius: 5px;
+        }
+        
+        .alert-item.critical {
+            border-left-color: #dc3545;
+            background: linear-gradient(to right, rgba(220, 53, 69, 0.1), transparent);
+        }
+        
+        .alert-item.high {
+            border-left-color: #fd7e14;
+            background: linear-gradient(to right, rgba(253, 126, 20, 0.1), transparent);
+        }
+        
+        .decision-item strong, .alert-item strong {
+            color: #667eea;
+            display: block;
+            margin-bottom: 5px;
+            font-size: 1.05em;
+        }
+        
+        .decision-item small, .alert-item small {
+            color: #666;
+            font-size: 0.85em;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 1200px) {
+            .grid-2col {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5a67d8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <h1>🤖 Finance AI Agent</h1>
+                <p>Autonomous Financial Intelligence & Monitoring System</p>
+            </div>
+            <div class="header-right">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span><strong>Agent Active</strong></span>
+                </div>
+                <button class="btn" onclick="refreshDashboard()">
+                    🔄 Refresh
+                </button>
+                <button class="btn" onclick="runAnalysis()">
+                    📊 Run Analysis
+                </button>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="cards-grid" id="kpi-cards">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                Loading dashboard data...
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="grid-2col">
+            <!-- Cash Flow Forecast Chart -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3>📈 Cash Flow Forecast</h3>
+                    <div class="chart-tabs">
+                        <button class="chart-tab active" onclick="changeForecastDays(30)">30 Days</button>
+                        <button class="chart-tab" onclick="changeForecastDays(60)">60 Days</button>
+                        <button class="chart-tab" onclick="changeForecastDays(90)">90 Days</button>
+                    </div>
+                </div>
+                <canvas id="cashFlowChart"></canvas>
+            </div>
+
+            <!-- Daily Net Flow Chart -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3>💰 Daily Net Flow</h3>
+                </div>
+                <canvas id="netFlowChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Decisions and Alerts Grid -->
+        <div class="grid-2col">
+            <!-- Recent Decisions -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3>🤖 Recent Agent Decisions</h3>
+                </div>
+                <div class="decisions-list" id="decisions-container">
+                    <div class="loading">Loading decisions...</div>
+                </div>
+            </div>
+
+            <!-- Active Alerts -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3>🚨 Active Alerts</h3>
+                </div>
+                <div class="alerts-list" id="alerts-container">
+                    <div class="loading">Loading alerts...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURACIÓN - Reemplaza con tus valores
+        // ============================================
+        const SUPABASE_URL = 'TU_SUPABASE_URL'
+        const SUPABASE_ANON_KEY = 'TU_SUPABASE_ANON_KEY'
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        
+        let cashFlowChart = null
+        let netFlowChart = null
+        let currentForecastDays = 30
+
+        // ============================================
+        // MAIN FUNCTIONS
+        // ============================================
+
+        async function refreshDashboard() {
+            console.log('🔄 Refreshing dashboard...')
+            
+            try {
+                // Llamar al edge function
+                const { data, error } = await sb.functions.invoke('finance-agent-api', {
+                    body: { action: 'dashboard' }
+                })
+
+                if (error) throw error
+
+                console.log('✅ Dashboard data received:', data)
+
+                // Actualizar componentes
+                updateKPICards(data)
+                updateCharts(data.forecast)
+                updateDecisions(data.recent_decisions)
+                updateAlerts(data.active_alerts)
+
+            } catch (error) {
+                console.error('❌ Error loading dashboard:', error)
+                showError('Error loading dashboard: ' + error.message)
+            }
+        }
+
+        async function runAnalysis() {
+            const btn = event.target
+            btn.disabled = true
+            btn.textContent = '⏳ Analyzing...'
+
+            try {
+                const { data, error } = await sb.functions.invoke('finance-agent-api', {
+                    body: { action: 'analyze' }
+                })
+
+                if (error) throw error
+
+                console.log('✅ Analysis complete:', data)
+                
+                // Mostrar resultados
+                alert(`Analysis Complete!\n\nNet Flow: $${data.analysis.summary.net_flow.toLocaleString()}\nBurn Rate: $${data.analysis.summary.burn_rate.toLocaleString()}\n\nInsights: ${data.analysis.insights.length} found`)
+                
+                // Refrescar dashboard
+                await refreshDashboard()
+
+            } catch (error) {
+                console.error('❌ Error in analysis:', error)
+                alert('Error running analysis: ' + error.message)
+            } finally {
+                btn.disabled = false
+                btn.innerHTML = '📊 Run Analysis'
+            }
+        }
+
+        async function changeForecastDays(days) {
+            currentForecastDays = days
+            
+            // Update tab styling
+            document.querySelectorAll('.chart-tab').forEach(tab => {
+                tab.classList.remove('active')
+            })
+            event.target.classList.add('active')
+
+            // Load new forecast
+            try {
+                const { data, error } = await sb.functions.invoke('finance-agent-api', {
+                    body: { action: 'forecast', days }
+                })
+
+                if (error) throw error
+
+                updateCharts(data.forecast)
+
+            } catch (error) {
+                console.error('Error loading forecast:', error)
+            }
+        }
+
+        // ============================================
+        // UPDATE FUNCTIONS
+        // ============================================
+
+        function updateKPICards(data) {
+            const container = document.getElementById('kpi-cards')
+            const financial = data.financial_health
+            const activity = data.activity
+
+            const statusClass = financial.status === 'healthy' ? 'status-healthy' : 
+                               financial.status === 'warning' ? 'status-warning' : 
+                               'status-critical'
+
+            container.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">💰</div>
+                        <h3>Cash Position</h3>
+                    </div>
+                    <div class="metric">$${financial.total_cash.toLocaleString()}</div>
+                    <p class="metric-subtitle">${financial.days_of_operation} days of operation</p>
+                    <span class="status-badge ${statusClass}">${financial.status.toUpperCase()}</span>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🔥</div>
+                        <h3>Monthly Burn Rate</h3>
+                    </div>
+                    <div class="metric">$${financial.monthly_burn_rate.toLocaleString()}</div>
+                    <p class="metric-subtitle">Average monthly expenses</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🤖</div>
+                        <h3>Agent Activity</h3>
+                    </div>
+                    <div class="metric">${activity.total_decisions}</div>
+                    <p class="metric-subtitle">Decisions made</p>
+                    <p class="metric-subtitle">${activity.active_alerts} active alerts</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">📊</div>
+                        <h3>Accounts Monitored</h3>
+                    </div>
+                    <div class="metric">${activity.accounts_monitored}</div>
+                    <p class="metric-subtitle">Financial accounts tracked</p>
+                </div>
+            `
+        }
+
+        function updateCharts(forecast) {
+            if (!forecast || forecast.length === 0) return
+
+            const dates = forecast.map(f => new Date(f.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
+            const balances = forecast.map(f => f.cumulative_balance)
+            const netFlows = forecast.map(f => f.net_flow)
+
+            // Cash Flow Chart
+            const ctx1 = document.getElementById('cashFlowChart').getContext('2d')
+            
+            if (cashFlowChart) cashFlowChart.destroy()
+
+            cashFlowChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Cumulative Balance',
+                        data: balances,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => '$' + context.parsed.y.toLocaleString()
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: (value) => '$' + value.toLocaleString()
+                            }
+                        }
+                    }
+                }
+            })
+
+            // Net Flow Chart
+            const ctx2 = document.getElementById('netFlowChart').getContext('2d')
+            
+            if (netFlowChart) netFlowChart.destroy()
+
+            netFlowChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Daily Net Flow',
+                        data: netFlows,
+                        backgroundColor: netFlows.map(v => v >= 0 ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)'),
+                        borderColor: netFlows.map(v => v >= 0 ? '#4caf50' : '#f44336'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => '$' + context.parsed.y.toLocaleString()
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: (value) => '$' + value.toLocaleString()
+                            }
+                        }
+                    }
+                }
+            })
+        }
+
+        function updateDecisions(decisions) {
+            const container = document.getElementById('decisions-container')
+            
+            if (!decisions || decisions.length === 0) {
+                container.innerHTML = '<div class="empty-state">No recent decisions</div>'
+                return
+            }
+
+            const html = decisions.map(decision => `
+                <div class="decision-item">
+                    <strong>${decision.title || decision.decision_type.replace(/_/g, ' ').toUpperCase()}</strong>
+                    <p>${decision.description || decision.reasoning || 'No description'}</p>
+                    <div style="margin-top: 8px;">
+                        ${decision.amount ? `<small>Amount: $${decision.amount.toLocaleString()}</small><br>` : ''}
+                        <small>Status: <strong>${decision.status}</strong></small><br>
+                        <small>Created: ${new Date(decision.created_at).toLocaleString()}</small>
+                    </div>
+                </div>
+            `).join('')
+
+            container.innerHTML = html
+        }
+
+        function updateAlerts(alerts) {
+            const container = document.getElementById('alerts-container')
+            
+            if (!alerts || alerts.length === 0) {
+                container.innerHTML = '<div class="empty-state">✅ No active alerts</div>'
+                return
+            }
+
+            const html = alerts.map(alert => `
+                <div class="alert-item ${alert.severity}">
+                    <strong>${alert.title}</strong>
+                    <p>${alert.description}</p>
+                    ${alert.recommendation ? `<p><em>💡 ${alert.recommendation}</em></p>` : ''}
+                    <div style="margin-top: 8px;">
+                        <small>Severity: <strong>${alert.severity.toUpperCase()}</strong></small><br>
+                        <small>Triggered: ${new Date(alert.triggered_at).toLocaleString()}</small>
+                    </div>
+                </div>
+            `).join('')
+
+            container.innerHTML = html
+        }
+
+        function showError(message) {
+            alert(message)
+        }
+
+        // ============================================
+        // AUTO-REFRESH
+        // ============================================
+
+        // Refresh every 60 seconds
+        setInterval(refreshDashboard, 60000)
+
+        // Initial load
+        window.addEventListener('load', refreshDashboard)
+    </script>
+</body>
+</html>
