@@ -119,6 +119,42 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--tx); 
 .modal-close { background:none; border:none; color:var(--tx3); font-size:20px; cursor:pointer; }
 
 /* Tooltips educativos */
+
+/* Audit section */
+.audit-score{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.audit-sc{flex:1;min-width:180px;background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);padding:16px;text-align:center;position:relative;overflow:hidden}
+.audit-sc::after{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.audit-sc.red::after{background:var(--red)}.audit-sc.amber::after{background:var(--amber)}.audit-sc.green::after{background:var(--green)}
+.audit-sc .num{font-size:28px;font-weight:700;margin:4px 0}
+.audit-sc .lbl{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:0.5px}
+.audit-sc .sub{font-size:11px;color:var(--tx3);margin-top:2px}
+.finding{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);padding:16px;margin-bottom:10px;border-left:4px solid var(--bg4)}
+.finding.f-critical{border-left-color:var(--red)}.finding.f-warning{border-left-color:var(--amber)}.finding.f-info{border-left-color:var(--acc)}.finding.f-ok{border-left-color:var(--green)}
+.finding-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.finding-title{font-weight:600;font-size:13px}
+.finding p{font-size:12px;color:var(--tx2);margin:4px 0;line-height:1.6}
+.finding code{background:var(--bg4);padding:1px 5px;border-radius:4px;font-size:11px;font-family:'JetBrains Mono',monospace}
+.finding .act{background:var(--bg3);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:12px;border-left:3px solid var(--acc);color:var(--tx2)}
+.finding .act b{color:var(--acc)}
+.audit-inv{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0}
+.audit-inv th{text-align:left;padding:6px 8px;color:var(--tx3);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--bg4)}
+.audit-inv td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.audit-inv .num{text-align:right;font-family:'JetBrains Mono',monospace}
+.audit-inv .zero{color:var(--red);font-weight:600}
+.audit-inv .ok{color:var(--green)}
+.audit-h2{font-size:15px;font-weight:700;margin:24px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--bg4)}
+.trust-box{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);padding:16px;margin:12px 0}
+.trust-box h4{font-size:13px;font-weight:600;margin-bottom:8px}
+.trust-box.good{border-color:rgba(34,197,94,0.3)}.trust-box.bad{border-color:rgba(239,68,68,0.3)}
+.trust-box p{font-size:12px;color:var(--tx2);margin:4px 0}
+.pri-list{counter-reset:pri}
+.pri-item{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);padding:12px 12px 12px 48px;margin-bottom:8px;position:relative}
+.pri-item::before{counter-increment:pri;content:counter(pri);position:absolute;left:12px;top:12px;width:24px;height:24px;border-radius:50%;background:var(--acc);color:var(--bg);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+.pri-item h4{font-size:13px;font-weight:600;margin-bottom:2px}
+.pri-item p{font-size:12px;color:var(--tx2)}
+.eff{display:inline-block;padding:2px 6px;border-radius:8px;font-size:10px;font-weight:500;margin-top:4px}
+.eff.low{background:rgba(34,197,94,0.15);color:var(--green)}.eff.med{background:rgba(245,158,11,0.15);color:var(--amber)}
+
 .tip { position:relative; display:inline-flex; align-items:center; }
 .tip-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:rgba(56,189,248,0.15); color:var(--acc); font-size:10px; font-weight:700; cursor:help; margin-left:6px; flex-shrink:0; border:1px solid rgba(56,189,248,0.3); transition:all 0.2s; }
 .tip-icon:hover { background:rgba(56,189,248,0.3); transform:scale(1.15); }
@@ -158,6 +194,7 @@ body.tips-off .tip-icon { display:none !important; }
   <div class="tab" onclick="showTab('forecast')">Forecast</div>
   <div class="tab" onclick="showTab('alerts')">Alertas</div>
   <div class="tab" onclick="showTab('concentration')">Concentración</div>
+  <div class="tab" onclick="showTab('audit')" style="color:var(--amber)">🔍 Auditoría</div>
 </div>
 
 <div class="main">
@@ -257,9 +294,12 @@ body.tips-off .tip-icon { display:none !important; }
       </div>
     </div>
   </div>
-</div>
 
-<!-- Client Modal -->
+  <!-- AUDIT -->
+  <div class="section" id="sec-audit">
+    <div id="auditContent"><div class="loading"><div class="spinner"></div>Ejecutando auditoría...</div></div>
+  </div>
+</div>
 <div class="modal-overlay" id="clientModal">
   <div class="modal">
     <div class="modal-head">
@@ -313,8 +353,13 @@ const TIPS = {
 
 
 function showTab(id) {
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', t.textContent.toLowerCase().includes(id.substring(0,4)) || (id==='overview' && i===0))
+  document.querySelectorAll('.tab').forEach(t => {
+    const txt = t.textContent.toLowerCase().trim()
+    const match = (id==='overview' && txt.includes('resum')) || 
+      (id==='aging' && txt.includes('aging')) || (id==='cxp' && txt==='cxp') ||
+      (id==='forecast' && txt.includes('forec')) || (id==='alerts' && txt.includes('alert')) ||
+      (id==='concentration' && txt.includes('concen')) || (id==='audit' && txt.includes('audit'))
+    t.classList.toggle('active', match)
   })
   document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === 'sec-'+id))
   if(id==='aging' && !agingLoaded) loadAging()
@@ -322,6 +367,7 @@ function showTab(id) {
   if(id==='concentration' && !concLoaded) loadConcentration()
   if(id==='alerts' && !alertsLoaded) loadAlerts()
   if(id==='cxp' && !cxpLoaded) loadCxP()
+  if(id==='audit' && !auditLoaded) loadAudit()
 }
 
 // ═══════════════════════════════════════════
@@ -620,6 +666,176 @@ document.getElementById('clientModal').addEventListener('click', e => { if(e.tar
 
 // Init
 loadDashboard()
+
+// ═══════════════════════════════════════════
+// AUDIT - Data Quality
+// ═══════════════════════════════════════════
+let auditLoaded = false
+async function loadAudit() {
+  if(auditLoaded) return
+  const el = document.getElementById('auditContent')
+  try {
+    // Fetch all needed data in parallel
+    const [syncRes, agingRes, concRes] = await Promise.all([
+      fetch(`${FIN_URL}?action=sync-status`,{headers:hdr}).then(r=>r.json()),
+      fetch(`${INT_URL}?action=aging`,{headers:hdr}).then(r=>r.json()),
+      fetch(`${INT_URL}?action=concentration`,{headers:hdr}).then(r=>r.json()),
+    ])
+
+    const tc = syncRes.table_counts || {}
+    const lastSync = syncRes.sync_logs?.[0]
+    const agTotals = agingRes.totals || {}
+    const totalTables = 12
+    const withData = Object.values(tc).filter(v => v > 0).length
+    const completePct = Math.round(withData / totalTables * 100)
+
+    // Check data freshness
+    const syncAge = lastSync ? Math.floor((Date.now() - new Date(lastSync.created_at).getTime()) / 3600000) : 999
+    const cobros = tc.zeta_recibos_cobranza || 0
+    const ventas = tc.zeta_ventas_detalladas || 0
+    const compras = tc.zeta_compras_detalladas || 0
+    const bancos = tc.zeta_movimientos_bancarios || 0
+    const caja = tc.zeta_movimientos_caja || 0
+    const cuotasC = tc.zeta_cuotas_clientes || 0
+    const cuotasP = tc.zeta_cuotas_proveedores || 0
+    const pagos = tc.zeta_recibos_pagos || 0
+    const cotiz = tc.zeta_cotizaciones || 0
+
+    // Severity scoring
+    const criticals = [cobros<=1, ventas<=5, compras<=5, bancos===0].filter(Boolean).length
+    const warnings = [pagos===0, caja===0, cotiz===0, cuotasC===0].filter(Boolean).length
+    const reliabilityLabel = criticals >= 3 ? 'Baja' : criticals >= 1 ? 'Media' : 'Alta'
+    const reliabilityClass = criticals >= 3 ? 'red' : criticals >= 1 ? 'amber' : 'green'
+
+    // Build the HTML
+    el.innerHTML = `
+    <!-- Scores -->
+    <div class="audit-score">
+      <div class="audit-sc ${completePct<40?'red':completePct<70?'amber':'green'}">
+        <div class="lbl">Completitud</div><div class="num">${completePct}%</div>
+        <div class="sub">${withData} de ${totalTables} tablas con datos</div>
+      </div>
+      <div class="audit-sc ${syncAge>24?'amber':'green'}">
+        <div class="lbl">Frescura Sync</div><div class="num">${syncAge<24?syncAge+'h':Math.floor(syncAge/24)+'d'}</div>
+        <div class="sub">Última sync: ${lastSync?new Date(lastSync.created_at).toLocaleString('es-UY'):'-'}</div>
+      </div>
+      <div class="audit-sc ${reliabilityClass}">
+        <div class="lbl">Confiabilidad</div><div class="num">${reliabilityLabel}</div>
+        <div class="sub">${criticals} problemas críticos</div>
+      </div>
+      <div class="audit-sc green">
+        <div class="lbl">CxC Consistencia</div><div class="num">OK</div>
+        <div class="sub">${agTotals.clientes_con_deuda||0} clientes verificados</div>
+      </div>
+    </div>
+
+    <!-- Inventario -->
+    <div class="audit-h2">📦 Inventario de Datos Sincronizados</div>
+    <table class="audit-inv"><thead><tr><th>Tabla</th><th class="num">Registros</th><th>Qué contiene</th><th>Estado</th></tr></thead><tbody>
+    ${invRow('Saldos Clientes (CxC)', tc.zeta_saldos_clientes, 'Lo que te deben los clientes')}
+    ${invRow('Saldos Proveedores (CxP)', tc.zeta_saldos_proveedores, 'Lo que le debés a proveedores')}
+    ${invRow('Contactos', tc.zeta_contactos, 'Clientes y proveedores registrados')}
+    ${invRow('Ventas Detalladas', tc.zeta_ventas_detalladas, 'Facturas emitidas (línea por línea)', 15)}
+    ${invRow('Compras Detalladas', tc.zeta_compras_detalladas, 'Compras a proveedores', 10)}
+    ${invRow('Recibos Cobranza', tc.zeta_recibos_cobranza, 'Cobros recibidos de clientes', 5)}
+    ${invRow('Recibos Pagos', tc.zeta_recibos_pagos, 'Pagos hechos a proveedores', 1)}
+    ${invRow('Movimientos Bancarios', tc.zeta_movimientos_bancarios, 'Movimientos de cuentas del banco', 1)}
+    ${invRow('Movimientos Caja', tc.zeta_movimientos_caja, 'Movimientos de caja chica', 1)}
+    ${invRow('Cuotas Clientes', tc.zeta_cuotas_clientes, 'Planes de pago de clientes')}
+    ${invRow('Cuotas Proveedores', tc.zeta_cuotas_proveedores, 'Planes de pago a proveedores')}
+    ${invRow('Cotizaciones', tc.zeta_cotizaciones, 'Tipos de cambio del día')}
+    </tbody></table>
+
+    <!-- Hallazgos críticos -->
+    <div class="audit-h2">🚨 Hallazgos Críticos</div>
+
+    ${cobros<=1 ? `<div class="finding f-critical">
+      <div class="finding-head"><div class="finding-title">Solo ${cobros} cobro(s) registrados en el sistema</div><span class="risk critico">CRÍTICO</span></div>
+      <p>Hay 135 facturas de CxC desde 2023, pero solo ${cobros} recibo de cobranza. Es imposible que en 2.5 años se haya cobrado solo una vez. Sin esto el forecast es una estimación ciega.</p>
+      <div class="act"><b>Acción en Zeta:</b> Verificar si se emiten recibos de cobranza. La API puede necesitar un rango de fechas más amplio.</div>
+    </div>` : ''}
+
+    ${ventas<=15 ? `<div class="finding f-critical">
+      <div class="finding-head"><div class="finding-title">Ventas: solo ${ventas} líneas (ene-feb 2026)</div><span class="risk critico">CRÍTICO</span></div>
+      <p>No hay ventas históricas. La CxC tiene facturas desde 2023, pero la API de ventas solo trajo datos recientes. No se pueden analizar tendencias ni estacionalidad.</p>
+      <div class="act"><b>Acción en Zeta:</b> Verificar si la API tiene filtro de fecha. Necesitamos al menos 12 meses de historial.</div>
+    </div>` : ''}
+
+    ${bancos===0 ? `<div class="finding f-critical">
+      <div class="finding-head"><div class="finding-title">Movimientos bancarios: vacío</div><span class="risk critico">CRÍTICO</span></div>
+      <p>Los saldos del banco están cargados a mano y se desactualizan. Sin movimientos automáticos, el cash balance no es confiable.</p>
+      <div class="act"><b>Acción en Zeta:</b> Verificar si la API de movimientos bancarios está habilitada.</div>
+    </div>` : ''}
+
+    ${compras<=5 ? `<div class="finding f-critical">
+      <div class="finding-head"><div class="finding-title">Compras: solo ${compras} registro(s)</div><span class="risk critico">CRÍTICO</span></div>
+      <p>254 comprobantes de CxP pero solo ${compras} compra detallada. No se pueden analizar costos ni márgenes.</p>
+      <div class="act"><b>Acción en Zeta:</b> Mismo problema que ventas. Ampliar rango de fechas de la API.</div>
+    </div>` : ''}
+
+    <!-- Hallazgos warning -->
+    <div class="audit-h2">⚠️ Alertas</div>
+
+    ${concRes.clientes?.[0]?.pct > 40 ? `<div class="finding f-warning">
+      <div class="finding-head"><div class="finding-title">${concRes.clientes[0].cliente}: ${concRes.clientes[0].pct}% de toda la CxC</div><span class="risk alto">ALERTA</span></div>
+      <p>U$S ${fmt(concRes.clientes[0].usd)} concentrados en un solo cliente. Si no aparece en ventas recientes, verificar si el saldo es real y si hubo cobros parciales no registrados.</p>
+      <div class="act"><b>Acción humana:</b> ¿Este saldo es real? ¿Hubo cobros parciales? ¿Hay disputa o acuerdo de pago?</div>
+    </div>` : ''}
+
+    ${pagos===0 ? `<div class="finding f-warning">
+      <div class="finding-head"><div class="finding-title">Recibos de pago: vacío</div><span class="risk alto">ALERTA</span></div>
+      <p>No hay registro de pagos a proveedores. Sin esto no podemos verificar si la CxP está actualizada.</p>
+    </div>` : ''}
+
+    ${cotiz===0 ? `<div class="finding f-info">
+      <div class="finding-head"><div class="finding-title">Cotizaciones (tipo de cambio): vacío</div><span class="risk medio">INFO</span></div>
+      <p>Se usa TC=43 fijo. Sin cotizaciones automáticas, las conversiones multi-moneda pueden desfasarse.</p>
+    </div>` : ''}
+
+    <!-- Trust boxes -->
+    <div class="audit-h2">💣 ¿Qué Datos Son Confiables?</div>
+    <div class="grid g2">
+      <div class="trust-box good">
+        <h4 style="color:var(--green)">✅ Confiable hoy</h4>
+        <p>• <b>CxC por cliente</b> — saldos completos de Zeta</p>
+        <p>• <b>Aging / antigüedad</b> — clasificación por tramo correcta</p>
+        <p>• <b>Concentración</b> — HHI y Pareto sobre datos reales</p>
+        <p>• <b>Alertas de CxC</b> — detección de morosos correcta</p>
+      </div>
+      <div class="trust-box bad">
+        <h4 style="color:var(--red)">❌ No confiable</h4>
+        <p>• <b>Cash balance</b> — saldos bancarios manuales, posible error moneda</p>
+        <p>• <b>Días de operación</b> — depende del cash</p>
+        <p>• <b>Forecast</b> — sin datos reales de cobranza</p>
+        <p>• <b>CxP</b> — posiblemente desactualizada, facturas de 2020</p>
+        <p>• <b>Facturación mensual</b> — solo 2 meses de datos</p>
+      </div>
+    </div>
+
+    <!-- Plan de acción -->
+    <div class="audit-h2">🎯 Plan de Acción</div>
+    <div class="pri-list">
+      <div class="pri-item"><h4>Verificar datos en Zeta: cobros, ventas, compras</h4><p>¿Se emiten recibos? ¿La API tiene filtro de fecha? Esto es fundamental.</p><span class="eff med">Depende de Zeta</span></div>
+      <div class="pri-item"><h4>Corregir moneda cuenta Itaú UYU</h4><p>Cambiar currency de "USD" a "UYU" y actualizar saldos bancarios al día.</p><span class="eff low">5 minutos</span></div>
+      <div class="pri-item"><h4>Revisar saldo mayor deudor</h4><p>¿Es real? ¿Hubo cobros parciales? Si no es cobrable, provisionar al 100%.</p><span class="eff med">Decisión tuya</span></div>
+      <div class="pri-item"><h4>Ampliar rango de fechas en API Zeta</h4><p>Para tener al menos 12 meses de ventas y compras históricas.</p><span class="eff low">15 minutos</span></div>
+      <div class="pri-item"><h4>Limpiar CxP antigua</h4><p>Revisar deudas de 2020 en Zeta. Si ya se pagaron, cancelar comprobantes.</p><span class="eff med">Depende de Zeta</span></div>
+      <div class="pri-item"><h4>Activar movimientos bancarios</h4><p>Para que los saldos se actualicen solos cada 6 horas.</p><span class="eff med">Depende de Zeta</span></div>
+    </div>
+    `
+    auditLoaded = true
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:20px;">Error cargando auditoría: '+e.message+'</div>' }
+}
+
+function invRow(name, count, desc, minExpected) {
+  const c = count || 0
+  const cls = c === 0 ? 'zero' : (minExpected && c <= minExpected ? '' : 'ok')
+  let status = ''
+  if(c === 0) status = '<span class="risk critico">❌ Vacío</span>'
+  else if(minExpected && c <= minExpected) status = '<span class="risk alto">⚠️ Muy poco</span>'
+  else status = '<span class="risk bajo">✓ OK</span>'
+  return `<tr><td>${name}</td><td class="num ${cls}">${c}</td><td style="color:var(--tx3)">${desc}</td><td>${status}</td></tr>`
+}
 </script>
 </body>
 </html>
