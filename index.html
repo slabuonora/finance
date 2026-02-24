@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Buonora — CFO Dashboard</title>
+    <title>La Buonora — CFO Dashboard v3</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -81,7 +81,7 @@
 
         /* KPI ROW */
         .kpi-row {
-            display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px;
+            display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px;
             margin-bottom: 20px;
         }
         .kpi {
@@ -196,23 +196,24 @@
         <div class="brand">
             <div class="brand-icon">LB</div>
             <div>
-                <h1>La Buonora — CFO</h1>
-                <p>Agente Financiero Autónomo &bull; Datos reales al 30 ene 2026</p>
+                <h1>La Buonora â€” CFO</h1>
+                <p id="header-subtitle">Agente Financiero v3 · Datos ZetaSoftware</p>
             </div>
         </div>
         <div class="header-actions">
+            <div class="badge" id="sync-badge" style="background:rgba(96,165,250,0.1);color:#60a5fa;border:1px solid rgba(96,165,250,0.2);font-size:0.7rem;padding:4px 10px;">⟳ Sync: —</div>
             <div class="badge badge-critical" id="status-badge">
                 <div class="badge-dot"></div>
                 <span>CARGANDO</span>
             </div>
-            <button class="btn" onclick="refreshDashboard()">↻ Actualizar</button>
-            <button class="btn" onclick="runAnalysis()" id="btn-analysis">▶ Análisis</button>
+            <button class="btn" onclick="refreshDashboard()">â†» Actualizar</button>
+            <button class="btn" onclick="runAnalysis()" id="btn-analysis">â–¶ AnÃ¡lisis</button>
         </div>
     </header>
 
     <!-- KPI ROW -->
     <div class="kpi-row" id="kpi-row">
-        <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div>Cargando datos financieros…</div>
+        <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div>Cargando datos financierosâ€¦</div>
     </div>
 
     <!-- MAIN GRID: Chart + Right sidebar -->
@@ -220,14 +221,14 @@
         <!-- FORECAST CHART -->
         <div class="panel">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                <div class="panel-title" style="margin-bottom:0"><span>📈</span> Proyección de Cash Flow</div>
+                <div class="panel-title" style="margin-bottom:0"><span>ðŸ“ˆ</span> ProyecciÃ³n de Cash Flow</div>
                 <div class="tabs">
                     <button class="tab active" onclick="changeForecast(30,this)">30d</button>
                     <button class="tab" onclick="changeForecast(60,this)">60d</button>
                     <button class="tab" onclick="changeForecast(90,this)">90d</button>
                 </div>
             </div>
-            <div style="height:240px;position:relative;"><canvas id="forecastChart"></canvas></div>
+            <canvas id="forecastChart" height="260"></canvas>
         </div>
 
         <!-- RIGHT SIDEBAR: Bank + Pipeline -->
@@ -235,7 +236,7 @@
 
             <!-- BANK ACCOUNTS -->
             <div class="panel">
-                <div class="panel-title"><span>🏦</span> Cuentas Bancarias</div>
+                <div class="panel-title"><span>ðŸ¦</span> Posicion Financiera</div>
                 <table class="accounts-table" id="accounts-table">
                     <tr><td colspan="3" class="loading-state"><div class="spinner"></div></td></tr>
                 </table>
@@ -243,7 +244,7 @@
 
             <!-- PIPELINE -->
             <div class="panel">
-                <div class="panel-title"><span>📊</span> Pipeline Comercial</div>
+                <div class="panel-title"><span>ðŸ“Š</span> Pipeline Comercial</div>
                 <div id="pipeline-container">
                     <div class="loading-state"><div class="spinner"></div></div>
                 </div>
@@ -256,7 +257,7 @@
 
         <!-- COST BREAKDOWN -->
         <div class="panel">
-            <div class="panel-title"><span>🔥</span> Estructura de Costos Mensual</div>
+            <div class="panel-title"><span>ðŸ”¥</span> Estructura de Costos Mensual</div>
             <div id="costs-container">
                 <div class="loading-state"><div class="spinner"></div></div>
             </div>
@@ -264,7 +265,7 @@
 
         <!-- TOP PAYABLES -->
         <div class="panel">
-            <div class="panel-title"><span>📋</span> Principales Acreedores (USD)</div>
+            <div class="panel-title"><span>ðŸ“‹</span> Top CxP — Proveedores (Zeta)</div>
             <div id="payables-container" style="max-height:280px;overflow-y:auto;">
                 <div class="loading-state"><div class="spinner"></div></div>
             </div>
@@ -272,14 +273,14 @@
 
         <!-- ALERTS -->
         <div class="panel">
-            <div class="panel-title"><span>🚨</span> Alertas Activas</div>
+            <div class="panel-title"><span>ðŸš¨</span> Alertas Activas</div>
             <div id="alerts-container" style="max-height:280px;overflow-y:auto;">
                 <div class="loading-state"><div class="spinner"></div></div>
             </div>
         </div>
     </div>
 
-    <div class="footer" id="footer">Dashboard v2.0 &bull; Última actualización: —</div>
+    <div class="footer" id="footer">Dashboard v3.0 · ZetaSoftware &bull; Ãšltima actualizaciÃ³n: â€”</div>
 </div>
 
 <script>
@@ -297,7 +298,7 @@ let forecastChart = null;
 // ============================================
 async function api(action, params = {}) {
     const qs = new URLSearchParams({ action, ...params }).toString();
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/finance-agent-api?${qs}`, {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/finance-agent-api-v2?${qs}`, {
         headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -308,13 +309,13 @@ async function api(action, params = {}) {
 // FORMAT HELPERS
 // ============================================
 const fmtUSD = (v, dec=0) => {
-    if (v == null) return '—';
+    if (v == null) return 'â€”';
     const abs = Math.abs(v);
     const str = abs >= 1000 ? abs.toLocaleString('en-US', {minimumFractionDigits:dec, maximumFractionDigits:dec}) : abs.toFixed(dec);
     return v < 0 ? `-$${str}` : `$${str}`;
 };
 const fmtK = (v) => {
-    if (v == null) return '—';
+    if (v == null) return 'â€”';
     const abs = Math.abs(v);
     const s = abs >= 1000 ? (abs/1000).toFixed(1) + 'K' : abs.toFixed(0);
     return v < 0 ? `-$${s}` : `$${s}`;
@@ -342,7 +343,7 @@ async function refreshDashboard() {
         const badge = document.getElementById('status-badge');
         if (fh.status === 'critical') {
             badge.className = 'badge badge-critical';
-            badge.querySelector('span').textContent = 'CRÍTICO';
+            badge.querySelector('span').textContent = 'CRÃTICO';
         } else if (fh.status === 'warning') {
             badge.className = 'badge badge-critical';
             badge.querySelector('span').textContent = 'ALERTA';
@@ -351,11 +352,24 @@ async function refreshDashboard() {
             badge.querySelector('span').textContent = 'SALUDABLE';
         }
 
+        
+        // Update sync badge
+        if (data.last_zeta_sync) {
+            const syncDate = new Date(data.last_zeta_sync);
+            const ago = Math.round((Date.now() - syncDate.getTime()) / 60000);
+            const agoText = ago < 60 ? ago + 'min' : Math.round(ago/60) + 'h';
+            document.getElementById('sync-badge').textContent = 'Zeta: ' + agoText + ' atras';
+        }
+        if (data.financial_health) {
+            document.getElementById('header-subtitle').textContent = 
+                'Agente Financiero v3 · Datos ZetaSoftware · TC ref: $' + (data.financial_health.tc_reference || '?');
+        }
+
         document.getElementById('footer').innerHTML =
-            `Dashboard v2.0 &bull; Última actualización: ${new Date().toLocaleString('es-UY')} &bull; Método: ${data.forecast_method || '—'}`;
+            `Dashboard v3.0 · ZetaSoftware &bull; Ãšltima actualizaciÃ³n: ${new Date().toLocaleString('es-UY')} &bull; MÃ©todo: ${data.forecast_method || 'â€”'}`;
     } catch(e) {
         console.error('Dashboard error:', e);
-        document.getElementById('kpi-row').innerHTML = `<div class="loading-state" style="grid-column:1/-1;color:var(--red)">⚠ Error cargando: ${e.message}</div>`;
+        document.getElementById('kpi-row').innerHTML = `<div class="loading-state" style="grid-column:1/-1;color:var(--red)">âš  Error cargando: ${e.message}</div>`;
     }
 }
 
@@ -365,42 +379,50 @@ async function refreshDashboard() {
 function renderKPIs(data) {
     const fh = data.financial_health || {};
     const pipe = data.pipeline || {};
+    const vr = data.ventas_resumen || {};
 
     const kpis = [
         {
-            label: 'Posición Bancaria',
+            label: 'Banco',
             value: fmtK(fh.total_cash),
             cls: cls(fh.total_cash),
-            sub: `${(fh.days_of_operation||0).toFixed(0)} días de operación`,
+            sub: `${(fh.days_of_operation||0).toFixed(0)} dias op.`,
             glow: fh.total_cash < 0 ? 'var(--red)' : 'var(--green)'
         },
         {
-            label: 'Posición Neta',
+            label: 'CxC (por cobrar)',
+            value: fmtK(fh.receivables_usd),
+            cls: 'positive',
+            sub: `${(data.cxc_by_currency||[]).reduce((s,c) => s + (c.comprobantes||0), 0)} comp.`,
+            glow: 'var(--green)'
+        },
+        {
+            label: 'CxP (por pagar)',
+            value: fmtK(-(fh.payables_usd || 0)),
+            cls: 'negative',
+            sub: `${(data.cxp_by_currency||[]).reduce((s,c) => s + (c.comprobantes||0), 0)} comp.`,
+            glow: 'var(--red)'
+        },
+        {
+            label: 'Posicion Neta',
             value: fmtK(fh.net_position),
             cls: cls(fh.net_position),
-            sub: `Banco + CxC - CxP`,
+            sub: 'Banco + CxC - CxP',
             glow: fh.net_position < 0 ? 'var(--red)' : 'var(--green)'
         },
         {
-            label: 'Pipeline Ponderado',
-            value: fmtK(pipe.total_weighted_pipeline || 0),
+            label: 'Facturacion Mes',
+            value: vr.total_usd ? ('U$S ' + Math.round(vr.total_usd).toLocaleString()) : fmtK(vr.total_pesos || 0),
             cls: 'positive',
-            sub: `${data.top_quotes?.length || 0} cotizaciones activas`,
+            sub: vr.total_pesos > 0 ? ('+ $' + Math.round(vr.total_pesos).toLocaleString() + ' UYU') : ((vr.cant_facturas || 0) + ' facturas'),
             glow: 'var(--accent)'
         },
         {
-            label: 'Burn Rate Mensual',
+            label: 'Burn Rate',
             value: fmtK(fh.monthly_burn_rate),
             cls: 'warning',
-            sub: `Costos fijos + variables`,
+            sub: 'Costos fijos + var.',
             glow: 'var(--amber)'
-        },
-        {
-            label: 'CxP Proveedores',
-            value: fmtK(-(fh.payables || 0)),
-            cls: 'negative',
-            sub: `${data.active_jobs?.length || 0} trabajos en producción`,
-            glow: 'var(--red)'
         }
     ];
 
@@ -498,26 +520,37 @@ async function changeForecast(days, btn) {
 // ============================================
 function renderAccounts(data) {
     const fh = data.financial_health || {};
-    // Try to get individual accounts from the status response
-    // The API returns totals, so we show the summary
-    const html = `
-        <thead><tr><th>Cuenta</th><th style="text-align:right">Saldo (USD)</th></tr></thead>
-        <tbody>
-            <tr><td style="color:var(--text-dim)">Itaú USD (9824201)</td>
-                <td style="text-align:right" class="mono ${cls(fh.total_cash)}">—</td></tr>
-            <tr><td style="color:var(--text-dim)">Itaú UYU (9824194)</td>
-                <td style="text-align:right" class="mono">—</td></tr>
-            <tr style="border-top:1px solid var(--border)">
-                <td style="font-weight:600">Total Banco</td>
-                <td style="text-align:right;font-weight:700" class="mono ${cls(fh.total_cash)}">${fmtUSD(fh.total_cash)}</td></tr>
-            <tr><td style="color:var(--text-dim)">CxC Pendientes</td>
-                <td style="text-align:right" class="mono ${cls(fh.receivables)}">${fmtUSD(fh.receivables)}</td></tr>
-            <tr><td style="color:var(--text-dim)">CxP Proveedores</td>
-                <td style="text-align:right" class="mono negative">${fmtUSD(-(fh.payables||0))}</td></tr>
-            <tr style="border-top:2px solid var(--border)">
-                <td style="font-weight:700">Posición Neta</td>
-                <td style="text-align:right;font-weight:700;font-size:1.05rem" class="mono ${cls(fh.net_position)}">${fmtUSD(fh.net_position)}</td></tr>
-        </tbody>`;
+    const cxcByCur = data.cxc_by_currency || [];
+    const cxpByCur = data.cxp_by_currency || [];
+    const banks = data.bank_accounts || [];
+
+    let html = '<thead><tr><th>Concepto</th><th style="text-align:right">Monto</th></tr></thead><tbody>';
+    for (const b of banks) {
+        html += '<tr><td style="color:var(--text-dim);font-size:0.8rem">' + b.name + '</td>' +
+            '<td style="text-align:right" class="mono ' + cls(parseFloat(b.balance)) + '">' + fmtUSD(parseFloat(b.balance)) + '</td></tr>';
+    }
+    html += '<tr style="border-top:1px solid var(--border)"><td style="font-weight:600">Total Banco</td>' +
+        '<td style="text-align:right;font-weight:700" class="mono ' + cls(fh.total_cash) + '">' + fmtUSD(fh.total_cash) + '</td></tr>';
+
+    html += '<tr style="border-top:2px solid var(--border)"><td colspan="2" style="font-size:0.72rem;color:var(--text-muted);padding-top:8px">CUENTAS POR COBRAR</td></tr>';
+    for (const c of cxcByCur) {
+        html += '<tr><td style="color:var(--text-dim);font-size:0.8rem">' + c.moneda_simbolo + ' (' + c.comprobantes + ' comp.)</td>' +
+            '<td style="text-align:right" class="mono positive">' + c.moneda_simbolo + ' ' + Math.round(c.total_saldo).toLocaleString() + '</td></tr>';
+    }
+    html += '<tr><td style="font-weight:600">Total CxC (USD)</td>' +
+        '<td style="text-align:right;font-weight:700" class="mono positive">' + fmtUSD(fh.receivables_usd) + '</td></tr>';
+
+    html += '<tr style="border-top:2px solid var(--border)"><td colspan="2" style="font-size:0.72rem;color:var(--text-muted);padding-top:8px">CUENTAS POR PAGAR</td></tr>';
+    for (const c of cxpByCur) {
+        html += '<tr><td style="color:var(--text-dim);font-size:0.8rem">' + c.moneda_simbolo + ' (' + c.comprobantes + ' comp.)</td>' +
+            '<td style="text-align:right" class="mono negative">-' + c.moneda_simbolo + ' ' + Math.round(c.total_saldo).toLocaleString() + '</td></tr>';
+    }
+    html += '<tr><td style="font-weight:600">Total CxP (USD)</td>' +
+        '<td style="text-align:right;font-weight:700" class="mono negative">' + fmtUSD(-(fh.payables_usd||0)) + '</td></tr>';
+
+    html += '<tr style="border-top:2px solid var(--border)"><td style="font-weight:700">Posicion Neta</td>' +
+        '<td style="text-align:right;font-weight:700;font-size:1.05rem" class="mono ' + cls(fh.net_position) + '">' + fmtUSD(fh.net_position) + '</td></tr>';
+    html += '</tbody>';
     document.getElementById('accounts-table').innerHTML = html;
 }
 
@@ -564,7 +597,7 @@ function renderPipeline(data) {
             <span class="mono negative" style="font-size:0.85rem">${fmtK(-(pipe.committed_costs||0))}</span>
         </div>` : ''}
         <div style="display:flex;justify-content:space-between;margin-top:4px;">
-            <span style="font-size:0.78rem;color:var(--text-dim)">Producción Activa</span>
+            <span style="font-size:0.78rem;color:var(--text-dim)">ProducciÃ³n Activa</span>
             <span class="mono" style="font-size:0.85rem">${pipe.active_production_jobs || 0} trabajos</span>
         </div>
     `;
@@ -589,14 +622,14 @@ function renderCosts(data) {
         <div class="cost-item"><span class="label">Costos Fijos Operativos</span><span class="val mono">${fmtUSD(fixed)}</span></div>
         <div style="padding-left:16px;">
             <div class="cost-item"><span class="label" style="font-size:0.75rem">Alquiler, servicios, seguros</span><span class="val mono" style="font-size:0.78rem">$5,280</span></div>
-            <div class="cost-item"><span class="label" style="font-size:0.75rem">Sueldos administración</span><span class="val mono" style="font-size:0.78rem">$5,546</span></div>
+            <div class="cost-item"><span class="label" style="font-size:0.75rem">Sueldos administraciÃ³n</span><span class="val mono" style="font-size:0.78rem">$5,546</span></div>
             <div class="cost-item"><span class="label" style="font-size:0.75rem">Honorarios, software, otros</span><span class="val mono" style="font-size:0.78rem">$1,479</span></div>
-            <div class="cost-item"><span class="label" style="font-size:0.75rem">Retiro socio (Gastón)</span><span class="val mono" style="font-size:0.78rem">$4,719</span></div>
+            <div class="cost-item"><span class="label" style="font-size:0.75rem">Retiro socio (GastÃ³n)</span><span class="val mono" style="font-size:0.78rem">$4,719</span></div>
         </div>
         <div class="cost-divider"></div>
-        <div class="cost-item"><span class="label">Costos Variables (producción)</span><span class="val mono">${fmtUSD(variable)}</span></div>
+        <div class="cost-item"><span class="label">Costos Variables (producciÃ³n)</span><span class="val mono">${fmtUSD(variable)}</span></div>
         <div style="padding-left:16px;">
-            <div class="cost-item"><span class="label" style="font-size:0.75rem">Sueldos producción (9 op.)</span><span class="val mono" style="font-size:0.78rem">$13,277</span></div>
+            <div class="cost-item"><span class="label" style="font-size:0.75rem">Sueldos producciÃ³n (9 op.)</span><span class="val mono" style="font-size:0.78rem">$13,277</span></div>
             <div class="cost-item"><span class="label" style="font-size:0.75rem">Sueldos obra (3 inst.)</span><span class="val mono" style="font-size:0.78rem">$5,645</span></div>
             <div class="cost-item"><span class="label" style="font-size:0.75rem">Tercerizados, materiales</span><span class="val mono" style="font-size:0.78rem">$18,891</span></div>
         </div>
@@ -611,29 +644,18 @@ function renderCosts(data) {
 // TOP PAYABLES
 // ============================================
 function renderPayables(data) {
-    // From accountant data - hardcoded top payables (these come from ACREEDORES ME)
-    const payables = [
-        { name: 'Barraca Paraná', amount: 22776.74 },
-        { name: 'Cargo Center', amount: 11253.30 },
-        { name: 'Pablo Montans', amount: 10222.69 },
-        { name: 'Montecuir', amount: 5667.50 },
-        { name: 'Carlos Baru Terra', amount: 3637.06 },
-        { name: 'Luissi', amount: 2427.40 },
-        { name: 'Enko S.A.', amount: 2213.20 },
-        { name: 'Acreedores MN (varios)', amount: 9097.26 },
-    ];
-
-    document.getElementById('payables-container').innerHTML = payables.map(p => `
-        <div class="payable-row">
-            <span class="payable-name">${p.name}</span>
-            <span class="payable-amount">-${fmtUSD(p.amount)}</span>
-        </div>
-    `).join('') + `
-        <div class="payable-row" style="border-top:2px solid var(--border);padding-top:10px;margin-top:4px;">
-            <span style="font-weight:700">Total CxP</span>
-            <span class="mono" style="font-weight:700;color:var(--red)">-${fmtUSD(payables.reduce((s,p)=>s+p.amount,0))}</span>
-        </div>
-    `;
+    const topProv = data.cxp_top || [];
+    if (!topProv.length) {
+        document.getElementById('payables-container').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px;">Sin datos CxP</div>';
+        return;
+    }
+    document.getElementById('payables-container').innerHTML = topProv.slice(0, 10).map(function(p) {
+        return '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:0.8rem;border-bottom:1px solid rgba(42,49,80,0.3);">' +
+            '<span style="color:var(--text-dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + p.proveedor + '</span>' +
+            '<span style="font-size:0.65rem;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:600;' + 
+                (p.moneda === 'U$S' ? 'background:rgba(96,165,250,0.12);color:#60a5fa' : 'background:rgba(34,197,94,0.12);color:#22c55e') + '">' + p.moneda + '</span>' +
+            '<span class="mono negative" style="font-weight:600;margin-left:10px;white-space:nowrap;">-' + p.moneda + ' ' + Math.round(p.total).toLocaleString() + '</span></div>';
+    }).join('');
 }
 
 // ============================================
@@ -641,14 +663,14 @@ function renderPayables(data) {
 // ============================================
 function renderAlerts(alerts) {
     if (!alerts?.length) {
-        document.getElementById('alerts-container').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px;">✅ Sin alertas activas</div>';
+        document.getElementById('alerts-container').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px;">âœ… Sin alertas activas</div>';
         return;
     }
     document.getElementById('alerts-container').innerHTML = alerts.map(a => `
         <div class="alert-card ${a.severity}">
             <div class="alert-title">${a.title}</div>
             <div class="alert-body">${a.description}</div>
-            ${a.recommendation ? `<div class="alert-rec">💡 ${a.recommendation}</div>` : ''}
+            ${a.recommendation ? `<div class="alert-rec">ðŸ’¡ ${a.recommendation}</div>` : ''}
         </div>
     `).join('');
 }
@@ -658,15 +680,15 @@ function renderAlerts(alerts) {
 // ============================================
 async function runAnalysis() {
     const btn = document.getElementById('btn-analysis');
-    btn.disabled = true; btn.textContent = '⏳ Analizando…';
+    btn.disabled = true; btn.textContent = 'â³ Analizandoâ€¦';
     try {
         const data = await api('analyze');
         const a = data.analysis || {};
-        const msg = `Análisis completado\n\nIngresos 30d: ${fmtUSD(a.summary?.total_income)}\nGastos 30d: ${fmtUSD(a.summary?.total_expenses)}\nInsights: ${(a.insights||[]).length}`;
+        const msg = `AnÃ¡lisis completado\n\nIngresos 30d: ${fmtUSD(a.summary?.total_income)}\nGastos 30d: ${fmtUSD(a.summary?.total_expenses)}\nInsights: ${(a.insights||[]).length}`;
         alert(msg);
         await refreshDashboard();
     } catch(e) { alert('Error: ' + e.message); }
-    finally { btn.disabled = false; btn.textContent = '▶ Análisis'; }
+    finally { btn.disabled = false; btn.textContent = 'â–¶ AnÃ¡lisis'; }
 }
 
 // ============================================
