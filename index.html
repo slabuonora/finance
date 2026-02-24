@@ -158,24 +158,21 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--tx); 
 .tip { position:relative; display:inline-flex; align-items:center; }
 .tip-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:rgba(56,189,248,0.15); color:var(--acc); font-size:10px; font-weight:700; cursor:help; margin-left:6px; flex-shrink:0; border:1px solid rgba(56,189,248,0.3); transition:all 0.2s; }
 .tip-icon:hover { background:rgba(56,189,248,0.3); transform:scale(1.15); }
-.tip-box { display:none; position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); background:var(--bg3); border:1px solid var(--acc); border-radius:10px; padding:14px 16px; width:300px; z-index:300; box-shadow:0 8px 32px rgba(0,0,0,0.5); pointer-events:none; }
-.tip-box::after { content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:var(--acc); }
-.tip-icon:hover + .tip-box, .tip-box:hover { display:block; pointer-events:auto; }
+#tipFloat { display:none; position:fixed; z-index:9999; background:var(--bg3); border:1px solid var(--acc); border-radius:10px; padding:14px 16px; width:320px; max-width:90vw; box-shadow:0 12px 40px rgba(0,0,0,0.7); }
+#tipFloat::after { content:''; position:absolute; border:6px solid transparent; left:50%; transform:translateX(-50%); }
+#tipFloat.above::after { top:100%; border-top-color:var(--acc); }
+#tipFloat.below::after { bottom:100%; border-bottom-color:var(--acc); }
 .tip-title { font-size:13px; font-weight:700; color:var(--acc); margin-bottom:6px; }
 .tip-text { font-size:12px; color:var(--tx); line-height:1.6; }
 .tip-text b { color:var(--green); font-weight:600; }
 .tip-text .bad { color:var(--red); }
 .tip-text .warn { color:var(--amber); }
 .tip-example { font-size:11px; color:var(--tx3); margin-top:8px; padding-top:8px; border-top:1px solid var(--bg4); font-style:italic; }
-
-/* Help toggle */
-.help-toggle { padding:5px 10px; font-size:11px; border-radius:8px; border:1px solid rgba(56,189,248,0.3); background:rgba(56,189,248,0.1); color:var(--acc); cursor:pointer; font-family:inherit; }
-.help-toggle:hover { background:rgba(56,189,248,0.2); }
-.help-toggle.off .tip-icon { display:none !important; }
 body.tips-off .tip-icon { display:none !important; }
 </style>
 </head>
 <body>
+<div id="tipFloat"></div>
 
 <div class="header">
   <h1>📊 <span>Finance Intelligence</span> · CarpinterIA</h1>
@@ -321,10 +318,38 @@ let charts = {}
 const fmt = (n,d=0) => n !== undefined && n !== null ? Number(n).toLocaleString('es-UY',{minimumFractionDigits:d,maximumFractionDigits:d}) : '0'
 const fmtK = (n) => { if(!n)return'0';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return(n/1e3).toFixed(0)+'K';return fmt(n) }
 
-// Tooltip helper
+// Tooltip helper — stores content in data attribute, rendered by floating div
 function tip(title, text, example) {
-  return `<span class="tip"><span class="tip-icon">?</span><span class="tip-box"><div class="tip-title">${title}</div><div class="tip-text">${text}</div>${example?`<div class="tip-example">${example}</div>`:''}</span></span>`
+  const content = `<div class="tip-title">${title}</div><div class="tip-text">${text}</div>${example?`<div class="tip-example">${example}</div>`:''}`
+  const encoded = content.replace(/"/g,'&quot;')
+  return `<span class="tip"><span class="tip-icon" data-tip="${encoded}">?</span></span>`
 }
+
+// Floating tooltip positioning
+const tipEl = document.getElementById('tipFloat')
+document.addEventListener('mouseover', e => {
+  const icon = e.target.closest('.tip-icon')
+  if(!icon || !icon.dataset.tip) return
+  tipEl.innerHTML = icon.dataset.tip
+  tipEl.style.display = 'block'
+  const r = icon.getBoundingClientRect()
+  const tw = 320, margin = 10
+  let left = r.left + r.width/2 - tw/2
+  if(left < margin) left = margin
+  if(left + tw > window.innerWidth - margin) left = window.innerWidth - margin - tw
+  // Try above first
+  if(r.top > 220) {
+    tipEl.style.top = (r.top - tipEl.offsetHeight - 8) + 'px'
+    tipEl.className = 'above'
+  } else {
+    tipEl.style.top = (r.bottom + 8) + 'px'
+    tipEl.className = 'below'
+  }
+  tipEl.style.left = left + 'px'
+})
+document.addEventListener('mouseout', e => {
+  if(e.target.closest('.tip-icon')) tipEl.style.display = 'none'
+})
 
 let helpOn = true
 function toggleHelp() {
